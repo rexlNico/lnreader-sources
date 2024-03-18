@@ -32,7 +32,7 @@ class LightNovelWPPlugin implements Plugin.PluginBase {
     this.name = metadata.sourceName;
     this.icon = `multisrc/lightnovelwp/${metadata.id}.png`;
     this.site = metadata.sourceSite;
-    this.version = "1.0.3";
+    this.version = "1.0.4";
     this.options = metadata.options;
     this.filters = metadata.filters satisfies Filters;
   }
@@ -47,7 +47,7 @@ class LightNovelWPPlugin implements Plugin.PluginBase {
     const $ = load(await r.text());
     const title = $("title").text().trim();
     if (this.getHostname(url) != this.getHostname(r.url) ||
-      title == "Bot Verification" || title == "You are being redirected...")
+      title == "Bot Verification" || title == "You are being redirected..." || title == "Un instant..." || title == "Just a moment..." || title == "Redirecting...")
       throw new Error("Captcha error, please open in webview");
 
     return ($);
