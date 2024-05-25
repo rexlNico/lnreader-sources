@@ -10,11 +10,13 @@
   },
   {
     "id": "kolnovel",
-    "sourceSite": "https://kolnovel.org/",
+    "sourceSite": "https://kolnovel.club/",
     "sourceName": "ملوك الروايات",
     "options": {
       "lang": "Arabic",
-      "reverseChapters": true
+      "reverseChapters": true,
+      "customJs": "let ignore = $('article > style').text().trim().split(',');ignore.push(...(ignore.pop()?.match(/^\\.\\w+/) || []));ignore.map(tag => $(`p${tag}`).remove());",
+      "versionIncrements": 1
     }
   },
   {
@@ -46,20 +48,22 @@
   },
   {
     "id": "daotranslate",
-    "sourceSite": "https://daotranslate.com/",
+    "sourceSite": "https://daotranslate.net/",
     "sourceName": "DaoTranslate",
     "options": {
       "lang": "English",
-      "reverseChapters": true
+      "reverseChapters": true,
+      "versionIncrements": 2
     }
   },
   {
     "id": "novelsparadise",
-    "sourceSite": "https://novelsparadise.net/",
+    "sourceSite": "https://novelsparadise.site/",
     "sourceName": "جنة الروايات",
     "options": {
       "lang": "Arabic",
-      "reverseChapters": true
+      "reverseChapters": true,
+      "versionIncrements": 1
     }
   },
   {
@@ -95,7 +99,9 @@
     "sourceName": "GenesisTls",
     "options": {
       "lang": "English",
-      "reverseChapters": false
+      "reverseChapters": false,
+      "versionIncrements": 1,
+      "customJs": "$('.genesistls-watermark').remove();$('.epcontent p').each((i, el) => { if ($(el).html() === '&nbsp;') $(el).remove(); });"
     }
   },
   {
@@ -135,11 +141,39 @@
     }
   },
   {
+    "id": "sektenovel",
+    "sourceSite": "https://sektenovel.web.id/",
+    "sourceName": "Sekte Novel",
+    "options": {
+      "lang": "Indonesian",
+      "reverseChapters": true
+    }
+  },
+  {
     "id": "systemtranslation",
     "sourceSite": "https://systemtranslation.com/",
     "sourceName": "System Translation",
     "options": {
       "lang": "English",
+      "reverseChapters": true
+    }
+  },
+  {
+    "id": "moonlightnovel",
+    "sourceSite": "https://moonlightnovel.com/",
+    "sourceName": "Moonlight Novels",
+    "options": {
+      "lang": "English",
+      "reverseChapters": true,
+      "seriesPath": "/novels/"
+    }
+  },
+  {
+    "id": "lightnovelbrasil",
+    "sourceSite": "https://lightnovelbrasil.com/",
+    "sourceName": "Light Novel Brasil",
+    "options": {
+      "lang": "Portuguese",
       "reverseChapters": true
     }
   }

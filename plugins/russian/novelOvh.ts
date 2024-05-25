@@ -1,29 +1,34 @@
-import { Plugin } from "@typings/plugin";
-import { FilterTypes, Filters } from "@libs/filterInputs";
-import { fetchApi, fetchFile } from "@libs/fetch";
-import { NovelStatus } from "@libs/novelStatus";
-import dayjs from "dayjs";
+import { Plugin } from '@typings/plugin';
+import { FilterTypes, Filters } from '@libs/filterInputs';
+import { fetchApi, fetchFile } from '@libs/fetch';
+import { NovelStatus } from '@libs/novelStatus';
+import dayjs from 'dayjs';
 
 class novelOvh implements Plugin.PluginBase {
-  id = "novelovh";
-  name = "НовелОВХ";
-  site = "https://novel.ovh";
-  version = "1.0.0";
-  icon = "src/ru/novelovh/icon.png";
+  id = 'novelovh';
+  name = 'НовелОВХ';
+  site = 'https://novel.ovh';
+  version = '1.0.2';
+  icon = 'src/ru/novelovh/icon.png';
 
   async popularNovels(
     pageNo: number,
     { showLatestNovels, filters }: Plugin.PopularNovelsOptions,
   ): Promise<Plugin.NovelItem[]> {
-    let url = this.site + "/novel?page=" + (pageNo - 1);
-    url += "&sort=" + 
-      (showLatestNovels ? "updatedAt" : filters?.sort?.value || "averageRating") + ",desc";
+    let url = this.site + '/content?page=' + (pageNo - 1);
+    url +=
+      '&sort=' +
+      (showLatestNovels
+        ? 'updatedAt'
+        : filters?.sort?.value || 'averageRating') +
+      ',desc';
 
-    const result = await fetchApi(url + "&_data=routes/reader/book/index");
-    const body = (await result.json()) as { books: BooksEntity[] };
+    const { books }: { books: BooksEntity[] } = await fetchApi(
+      url + '&_data=routes/reader/book/index',
+    ).then(res => res.json());
 
     const novels: Plugin.NovelItem[] = [];
-    body.books.forEach((novel) =>
+    books.forEach(novel =>
       novels.push({
         name: novel.name.ru,
         cover: novel.poster,
@@ -35,56 +40,58 @@ class novelOvh implements Plugin.PluginBase {
   }
 
   async parseNovel(novelPath: string): Promise<Plugin.SourceNovel> {
-    const result = await fetchApi(
-      this.resolveUrl(novelPath, true) + "?_data=routes/reader/book/$slug/index",
-    );
-    const json = (await result.json()) as responseNovel;
+    const { book, chapters }: responseNovel = await fetchApi(
+      this.site +
+        '/content/' +
+        novelPath +
+        '?_data=routes/reader/book/$slug/index',
+    ).then(res => res.json());
 
     const novel: Plugin.SourceNovel = {
       path: novelPath,
-      name: json.book.name.ru,
-      cover: json.book.poster,
-      genres: json.book.labels?.map?.((label) => label.name).join(","),
-      summary: json.book.description,
+      name: book.name.ru,
+      cover: book.poster,
+      genres: book.labels?.map?.(label => label.name).join(','),
+      summary: book.description,
       status:
-        json.book.status == "ONGOING"
-          ? NovelStatus.Ongoing
-          : NovelStatus.Completed,
+        book.status == 'ONGOING' ? NovelStatus.Ongoing : NovelStatus.Completed,
     };
 
-    json.book.relations?.forEach((person) => {
+    book.relations?.forEach(person => {
       switch (person.type) {
-        case "AUTHOR":
+        case 'AUTHOR':
           novel.author = person.publisher.name;
-        case "ARTIST":
+        case 'ARTIST':
           novel.artist = person.publisher.name;
       }
     });
 
-    const chapters: Plugin.ChapterItem[] = [];
+    const chaptersRes: Plugin.ChapterItem[] = [];
 
-    json.chapters.forEach((chapter, chapterIndex) =>
-      chapters.push({
+    chapters.forEach((chapter, chapterIndex) =>
+      chaptersRes.push({
         name:
           chapter.title ||
-          "Том " + (chapter.volume || 0) + " " +
-          (chapter.name || "Глава " +
-          (chapter.number || json.chapters.length - chapterIndex)),
-        path: novelPath + "/" + chapter.id + "/0",
-        releaseTime: dayjs(chapter.createdAt).format("LLL"),
-        chapterNumber: json.chapters.length - chapterIndex,
+          'Том ' +
+            (chapter.volume || 0) +
+            ' ' +
+            (chapter.name ||
+              'Глава ' + (chapter.number || chapters.length - chapterIndex)),
+        path: novelPath + '/' + chapter.id + '/0',
+        releaseTime: dayjs(chapter.createdAt).format('LLL'),
+        chapterNumber: chapters.length - chapterIndex,
       }),
     );
 
-    novel.chapters = chapters.reverse();
+    novel.chapters = chaptersRes.reverse();
     return novel;
   }
 
   async parseChapter(chapterPath: string): Promise<string> {
-    const result = await fetchApi(
-      "https://api.novel.ovh/v2/chapters/" + chapterPath.split("/")[1],
-    );
-    const book = (await result.json()) as responseChapter;
+    const book: responseChapter = await fetchApi(
+      'https://api.novel.ovh/v2/chapters/' + chapterPath.split('/')[1],
+    ).then(res => res.json());
+
     const image = Object.fromEntries(
       book?.pages?.map(({ id, image }) => [id, image]) || [],
     );
@@ -93,16 +100,12 @@ class novelOvh implements Plugin.PluginBase {
     return chapterText;
   }
 
-  async searchNovels(
-    searchTerm: string,
-    page: number | undefined = 1,
-  ): Promise<Plugin.NovelItem[]> {
-    const url = `${this.site}/novel?search=${searchTerm}&page=${page - 1}`;
-    const result = await fetchApi(url + "&_data=routes/reader/book/index");
-    const body = (await result.json()) as { books: BooksEntity[] };
+  async searchNovels(searchTerm: string): Promise<Plugin.NovelItem[]> {
+    const url = `https://api.novel.ovh/v2/books?type=NOVEL&search=${searchTerm}`;
+    const books: BooksEntity[] = await fetchApi(url).then(res => res.json());
 
     const novels: Plugin.NovelItem[] = [];
-    body.books.forEach((novel) =>
+    books.forEach(novel =>
       novels.push({
         name: novel.name.ru,
         cover: novel.poster,
@@ -116,37 +119,39 @@ class novelOvh implements Plugin.PluginBase {
   jsonToHtml = (
     json: ContentEntity[],
     image: { [key: string]: string },
-    html: string = "",
+    html: string = '',
   ) => {
-    json.forEach((element) => {
+    json.forEach(element => {
       switch (element.type) {
-        case "image":
+        case 'image':
           if (element.attrs?.pages?.[0]) {
             html += `<img src="${image[element.attrs.pages[0]]}"/>`;
           }
           break;
-        case "hardBreak":
-          html += "<br>";
+        case 'hardBreak':
+          html += '<br>';
           break;
-        case "horizontalRule":
-        case "delimiter":
+        case 'horizontalRule':
+        case 'delimiter':
           html += '<h2 style="text-align: center">***</h2>';
           break;
-        case "paragraph":
+        case 'paragraph':
           html +=
-            "<p" +
+            '<p' +
             (element?.attrs?.textAlign
               ? ` style="text-align: ${element.attrs.textAlign}"`
-              : "") +
-            ">" +
-            (element.content ? this.jsonToHtml(element.content, image) : "<br>") +
-            "</p>";
+              : '') +
+            '>' +
+            (element.content
+              ? this.jsonToHtml(element.content, image)
+              : '<br>') +
+            '</p>';
           break;
-        case "text":
+        case 'text':
           html += element.text;
           break;
         default:
-          html += JSON.stringify(element, null, "\t"); //maybe I missed something.
+          html += JSON.stringify(element, null, '\t'); //maybe I missed something.
           break;
       }
     });
@@ -154,20 +159,21 @@ class novelOvh implements Plugin.PluginBase {
   };
 
   fetchImage = fetchFile;
-  resolveUrl = (path: string, isNovel?: boolean) => this.site + "/novel/" + path;
+  resolveUrl = (path: string, isNovel?: boolean) =>
+    this.site + '/novel/' + path;
 
   filters = {
     sort: {
-      label: "Сортировка",
-      value: "averageRating",
+      label: 'Сортировка',
+      value: 'averageRating',
       options: [
-        { label: "Кол-во просмотров", value: "viewsCount" },
-        { label: "Кол-во лайков", value: "likesCount" },
-        { label: "Кол-во глав", value: "chaptersCount" },
-        { label: "Кол-во закладок", value: "bookmarksCount" },
-        { label: "Рейтингу", value: "averageRating" },
-        { label: "Дате создания", value: "createdAt" },
-        { label: "Дате обновления", value: "updatedAt" },
+        { label: 'Кол-во просмотров', value: 'viewsCount' },
+        { label: 'Кол-во лайков', value: 'likesCount' },
+        { label: 'Кол-во глав', value: 'chaptersCount' },
+        { label: 'Кол-во закладок', value: 'bookmarksCount' },
+        { label: 'Рейтингу', value: 'averageRating' },
+        { label: 'Дате создания', value: 'createdAt' },
+        { label: 'Дате обновления', value: 'updatedAt' },
       ],
       type: FilterTypes.Picker,
     },
